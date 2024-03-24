@@ -1,3 +1,4 @@
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,7 +7,6 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:location/location.dart';
 
 import '../const.dart';
-
 
 class MapPage extends StatefulWidget {
   final List<Map<String, dynamic>> placesList;
@@ -28,8 +28,7 @@ class _MapPageState extends State<MapPage> {
   Location _locationController = Location();
   final Completer<GoogleMapController> _mapController =
   Completer<GoogleMapController>();
-  static const LatLng _initialPosition =
-  LatLng(6.9136764758581375, 79.86160127549243);
+  static const LatLng _initialPosition =LatLng(6.9136764758581375, 79.86160127549243);
   LatLng? _currentP;
   List<LatLng> _locations = [];
   late String _startingPoint;
@@ -50,6 +49,25 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.amber,
+        title: const Text.rich(
+          TextSpan(
+            text: 'Travel',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+            ),
+            children: [
+              TextSpan(
+                text: ' Planner',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
       body: _currentP == null
           ? const Center(
         child: Text('Loading...'),
@@ -57,8 +75,8 @@ class _MapPageState extends State<MapPage> {
           : GoogleMap(
         onMapCreated: (GoogleMapController controller) =>
             _mapController.complete(controller),
-        mapType: MapType.terrain,
-        initialCameraPosition: CameraPosition(
+        mapType: MapType.normal,
+        initialCameraPosition: const CameraPosition(
           target: _initialPosition,
           zoom: 15,
         ),
@@ -124,22 +142,34 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> getPolylinePoints() async {
     List<LatLng> polylineCoordinates = [];
-    PolylinePoints polylinePoints = PolylinePoints();
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      GOOGLE_MAPS_API_KEY,
-      PointLatLng(_initialPosition.latitude, _initialPosition.longitude),
-      PointLatLng(_locations.last.latitude, _locations.last.longitude),
-      travelMode: TravelMode.driving,
-    );
-    if (result.points.isNotEmpty) {
-      result.points.forEach((PointLatLng point) {
-        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-      });
-    } else {
-      print(result.errorMessage);
+
+    // Add starting point to polyline coordinates
+    polylineCoordinates.add(_locations.first);
+
+    // Iterate through each location in placesList and add it to polyline coordinates
+    for (int i = 1; i < _locations.length; i++) {
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        GOOGLE_MAPS_API_KEY,
+        PointLatLng(_locations[i - 1].latitude, _locations[i - 1].longitude),
+        PointLatLng(_locations[i].latitude, _locations[i].longitude),
+        travelMode: TravelMode.driving,
+      );
+
+      if (result.points.isNotEmpty) {
+        result.points.forEach((PointLatLng point) {
+          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+        });
+      } else {
+        print(result.errorMessage);
+      }
     }
+
+    // Add ending point to polyline coordinates
+    polylineCoordinates.add(_locations.last);
+
     generatePolyLineFromPoints(polylineCoordinates);
   }
+
 
   Future<void> _cameraToPosition(LatLng pos) async {
     final GoogleMapController controller = await _mapController.future;
@@ -156,7 +186,7 @@ class _MapPageState extends State<MapPage> {
     PolylineId id = PolylineId("poly");
     Polyline polyline = Polyline(
       polylineId: id,
-      color: Colors.black,
+      color: Colors.amber,
       points: polylineCoordinates,
       width: 8,
     );
